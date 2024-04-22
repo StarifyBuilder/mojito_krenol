@@ -6046,6 +6046,15 @@ CONFIG_LTO_CLANG=y
 CONFIG_LTO=y
 CONFIG_THINLTO=y
 CONFIG_WIREGUARD=y
+###########################################################
+# enable KernelSU
+CONFIG_KSU=y 
+CONFIG_KSU_LSM_SECURITY_HOOKS=y
+# manual integration, no kprobes
+CONFIG_KPROBES=n
+CONFIG_HAVE_KPROBES=n
+CONFIG_KPROBE_EVENTS=n
+CONFIG_KPROBE_EVENT=n
 #########################################################
 CONFIG_ANON_MIN_KBYTES=196608
 CONFIG_CLEAN_LOW_KBYTES=393216
