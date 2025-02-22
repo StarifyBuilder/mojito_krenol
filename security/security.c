@@ -393,6 +393,7 @@ int security_sb_statfs(struct dentry *dentry)
 int security_sb_mount(const char *dev_name, const struct path *path,
                        const char *type, unsigned long flags, void *data)
 {
+	pr_info("security_sb_mount: devicename %s fstype: %s\n", dev_name, type);
 	return call_int_hook(sb_mount, 0, dev_name, path, type, flags, data);
 }
 
