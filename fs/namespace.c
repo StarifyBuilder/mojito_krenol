@@ -3187,6 +3187,10 @@ struct dentry *mount_subtree(struct vfsmount *mnt, const char *name)
 }
 EXPORT_SYMBOL(mount_subtree);
 
+#ifdef CONFIG_KSU
+extern int ksu_mount_monitor(const char *dev_name, const char *dirname, const char *type);
+#endif
+
 SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
 		char __user *, type, unsigned long, flags, void __user *, data)
 {
@@ -3194,6 +3198,10 @@ SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
 	char *kernel_type;
 	char *kernel_dev;
 	void *options;
+
+#ifdef CONFIG_KSU
+	ksu_mount_monitor(copy_mount_string(dev_name), copy_mount_string(dir_name), copy_mount_string(type));
+#endif	
 
 	kernel_type = copy_mount_string(type);
 	ret = PTR_ERR(kernel_type);
