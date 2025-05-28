@@ -961,6 +961,23 @@ LSM_HANDLER_TYPE ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 }
 #endif
 
+static int ksu_ptrace_perm(struct task_struct *child, unsigned int mode)
+{
+	uid_t uid = __kuid_val(child->cred->uid);
+
+	if (ksu_uid_should_umount(uid)) {
+		pr_info("%s: found tracing! current uid=%d, child uid=%d\n", __func__,
+			__kuid_val(current->cred->uid), uid);
+		
+		// current->ptrace_message = 0; // clear parent
+		// child->ptrace_message = 0; // clear child
+		// who cares, just block all access
+		// return -ENOSYS;
+		return -EPERM;
+	}
+	return 0;
+}
+
 #ifdef CONFIG_KSU_LSM_SECURITY_HOOKS
 static int ksu_task_prctl(int option, unsigned long arg2, unsigned long arg3,
 			  unsigned long arg4, unsigned long arg5)
@@ -987,6 +1004,7 @@ static struct security_hook_list ksu_hooks[] = {
 	LSM_HOOK_INIT(task_fix_setuid, ksu_task_fix_setuid),
 	LSM_HOOK_INIT(sb_mount, ksu_sb_mount),
 	LSM_HOOK_INIT(inode_permission, ksu_inode_permission),
+	LSM_HOOK_INIT(ptrace_access_check, ksu_ptrace_perm),
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) || defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)
 	LSM_HOOK_INIT(key_permission, ksu_key_permission)
 #endif
