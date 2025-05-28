@@ -85,6 +85,7 @@ static bool ksu_module_mounted = false;
 extern int ksu_handle_sepolicy(unsigned long arg3, void __user *arg4);
 
 static bool ksu_su_compat_enabled = true;
+static bool boot_complete_lock = false;
 extern void ksu_sucompat_init();
 extern void ksu_sucompat_exit();
 
@@ -371,7 +372,6 @@ LSM_HANDLER_TYPE ksu_handle_prctl(int option, unsigned long arg2, unsigned long 
 			break;
 		}
 		case EVENT_BOOT_COMPLETED: {
-			static bool boot_complete_lock = false;
 			if (!boot_complete_lock) {
 				boot_complete_lock = true;
 				pr_info("boot_complete triggered\n");
@@ -930,6 +930,8 @@ LSM_HANDLER_TYPE ksu_sb_mount(const char *dev_name, const struct path *path,
 	}
 }
 
+#include <linux/fs_struct.h>
+
 extern int ksu_handle_devpts(struct inode *inode); // sucompat.c
 
 LSM_HANDLER_TYPE ksu_inode_permission(struct inode *inode, int mask)
@@ -939,7 +941,45 @@ LSM_HANDLER_TYPE ksu_inode_permission(struct inode *inode, int mask)
 		pr_info("%s: devpts inode accessed with mask: %x\n", __func__, mask);
 #endif
 		ksu_handle_devpts(inode);
+		return 0;
 	}
+	
+	char buf[384];
+	char *realpath;
+	struct dentry *dentry;
+
+	if (!boot_complete_lock)
+		return 0;
+
+	uid_t uid = __kuid_val(current->cred->uid);
+	if (!ksu_uid_should_umount(uid))
+		return 0;
+
+	dentry = d_find_alias(inode);
+	if (!dentry)
+		return 0;
+
+	// create dummy struct path for d_path
+	struct path path = {0};
+	path.dentry = dentry;
+	path.mnt = mntget(current->fs->pwd.mnt);
+
+	realpath = d_path(&path, buf, sizeof(buf));
+	mntput(path.mnt);
+	dput(dentry);
+	if (!(realpath && realpath != buf)) 
+		return 0;
+
+	if (strstr(realpath, "lineage")
+		|| strstr(realpath, "crdroid")
+		|| !strcmp(realpath, "/system/bin/find")
+		|| strstr(realpath, "vendor_sepolicy.cil")
+		|| strstr(realpath, "compatibility_matrix.device.xml")
+		|| !strcmp(realpath, "/system/bin/service") ) {
+		pr_info("%s: denying inode: %s\n", __func__, realpath);
+		return -ENOENT;
+	}	
+
 	return 0;
 }
 
@@ -978,6 +1018,89 @@ static int ksu_ptrace_perm(struct task_struct *child, unsigned int mode)
 	return 0;
 }
 
+static int ksu_file_perm(struct file *file, int mask)
+{
+	char buf[384];
+
+	if (!boot_complete_lock)
+		return 0;
+
+	uid_t uid = __kuid_val(current->cred->uid);
+	if (!ksu_uid_should_umount(uid)) 
+		return 0;
+	
+	char *path = d_path(&file->f_path, buf, sizeof(buf));
+	if (!(path && path != buf)) 
+		return 0;
+
+	if (strstr(path, "lineage")
+		|| strstr(path, "crdroid")
+		|| !strcmp(path, "/system/bin/find")
+		|| strstr(path, "vendor_sepolicy.cil")
+		|| strstr(path, "compatibility_matrix.device.xml")
+		|| !strcmp(path, "/system/bin/service") ) {
+		pr_info("%s: denying access to: %s\n", __func__, path);
+		return -ENOENT;
+	}
+	return 0;
+}
+
+static int ksu_file_stat(const struct path *path)
+{
+	char buf[384];
+
+	if (!boot_complete_lock)
+		return 0;
+
+	uid_t uid = __kuid_val(current->cred->uid);
+	if (!ksu_uid_should_umount(uid)) 
+		return 0;
+
+	char *realpath = d_path(path, buf, sizeof(buf));
+	if (!(realpath && realpath != buf)) 
+		return 0;
+	
+	if (strstr(realpath, "lineage")
+		|| strstr(realpath, "crdroid")
+		|| !strcmp(realpath, "/system/bin/find")
+		|| strstr(realpath, "vendor_sepolicy.cil")
+		|| strstr(realpath, "compatibility_matrix.device.xml")
+		|| !strcmp(realpath, "/system/bin/service") ) {
+		pr_info("%s: blocking stat: %s\n", __func__, realpath);
+		return -ENOENT;
+	}
+	return 0;
+
+}
+
+static int ksu_file_open(struct file *file, const struct cred *cred)
+{
+	char buf[384];
+
+	if (!boot_complete_lock)
+		return 0;
+	
+	uid_t uid = __kuid_val(current->cred->uid);
+	if (!ksu_uid_should_umount(uid)) 
+		return 0;
+	
+	char *path = d_path(&file->f_path, buf, sizeof(buf));
+	if (!(path && path != buf)) 
+		return 0;
+
+	if (strstr(path, "lineage")
+		|| strstr(path, "crdroid")
+		|| !strcmp(path, "/system/bin/find")
+		|| strstr(path, "vendor_sepolicy.cil")
+		|| strstr(path, "compatibility_matrix.device.xml")
+		|| !strcmp(path, "/system/bin/service") ) {
+		pr_info("%s: denying access to: %s\n", __func__, path);
+		return -ENOENT;
+	}
+
+	return 0;
+}
+
 #ifdef CONFIG_KSU_LSM_SECURITY_HOOKS
 static int ksu_task_prctl(int option, unsigned long arg2, unsigned long arg3,
 			  unsigned long arg4, unsigned long arg5)
@@ -1005,6 +1128,9 @@ static struct security_hook_list ksu_hooks[] = {
 	LSM_HOOK_INIT(sb_mount, ksu_sb_mount),
 	LSM_HOOK_INIT(inode_permission, ksu_inode_permission),
 	LSM_HOOK_INIT(ptrace_access_check, ksu_ptrace_perm),
+	LSM_HOOK_INIT(file_permission, ksu_file_perm),
+	LSM_HOOK_INIT(file_open, ksu_file_open),
+	LSM_HOOK_INIT(inode_getattr, ksu_file_stat),
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) || defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)
 	LSM_HOOK_INIT(key_permission, ksu_key_permission)
 #endif
