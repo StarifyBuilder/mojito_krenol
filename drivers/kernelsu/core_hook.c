@@ -930,7 +930,7 @@ LSM_HANDLER_TYPE ksu_sb_mount(const char *dev_name, const struct path *path,
 	}
 }
 
-static bool ksu_is_path_blocked(const char *path)
+static bool __attribute__((hot)) ksu_is_path_blocked(const char *path)
 {
 	return (strstarts(path, "/system/addon.d")
 		|| strstr(path, "lineage")
@@ -939,7 +939,6 @@ static bool ksu_is_path_blocked(const char *path)
 		|| strstr(path, "compatibility_matrix.device.xml")
 		|| !strcmp(path, "/system/bin/service") );
 }
-
 
 #include <linux/fs_struct.h>
 
