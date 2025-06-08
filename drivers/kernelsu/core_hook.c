@@ -933,8 +933,7 @@ LSM_HANDLER_TYPE ksu_sb_mount(const char *dev_name, const struct path *path,
 static bool __attribute__((hot)) ksu_is_path_blocked(const char *path)
 {
 	return (strstarts(path, "/system/addon.d")
-		|| strstr(path, "lineage")
-		|| strstr(path, "crdroid")
+		|| ( ( strstarts(path, "/system") || strstarts(path, "/product") || strstarts(path, "/vendor")) && (strstr(path, "lineage") || strstr(path, "crdroid") ))
 		|| strstr(path, "vendor_sepolicy.cil")
 		|| strstr(path, "compatibility_matrix.device.xml")
 		|| !strcmp(path, "/system/bin/service") );
