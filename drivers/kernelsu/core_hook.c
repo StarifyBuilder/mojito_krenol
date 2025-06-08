@@ -1001,33 +1001,6 @@ LSM_HANDLER_TYPE ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 }
 #endif
 
-static int ksu_file_perm(struct file *file, int mask)
-{
-	char buf[384];
-
-	if (!boot_complete_lock)
-		return 0;
-
-	uid_t uid = __kuid_val(current->cred->uid);
-	if (!ksu_uid_should_umount(uid)) 
-		return 0;
-	
-	char *path = d_path(&file->f_path, buf, sizeof(buf));
-	if (!(path && path != buf)) 
-		return 0;
-
-	if (strstarts(path, "/system/addon.d")
-		|| strstr(path, "lineage")
-		|| strstr(path, "crdroid")
-		|| strstr(path, "vendor_sepolicy.cil")
-		|| strstr(path, "compatibility_matrix.device.xml")
-		|| !strcmp(path, "/system/bin/service") ) {
-		pr_info("%s: denying access to: %s\n", __func__, path);
-		return -ENOENT;
-	}
-	return 0;
-}
-
 static int ksu_file_stat(const struct path *path)
 {
 	char buf[384];
@@ -1110,7 +1083,6 @@ static struct security_hook_list ksu_hooks[] = {
 	LSM_HOOK_INIT(task_fix_setuid, ksu_task_fix_setuid),
 	LSM_HOOK_INIT(sb_mount, ksu_sb_mount),
 	LSM_HOOK_INIT(inode_permission, ksu_inode_permission),
-	LSM_HOOK_INIT(file_permission, ksu_file_perm),
 	LSM_HOOK_INIT(file_open, ksu_file_open),
 	LSM_HOOK_INIT(inode_getattr, ksu_file_stat),
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) || defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)
