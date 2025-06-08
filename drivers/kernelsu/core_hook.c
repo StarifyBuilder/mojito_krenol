@@ -970,9 +970,9 @@ LSM_HANDLER_TYPE ksu_inode_permission(struct inode *inode, int mask)
 	if (!(realpath && realpath != buf)) 
 		return 0;
 
-	if (strstr(realpath, "lineage")
+	if (strstarts(realpath, "/system/addon.d")
+		|| strstr(realpath, "lineage")
 		|| strstr(realpath, "crdroid")
-		|| !strcmp(realpath, "/system/bin/find")
 		|| strstr(realpath, "vendor_sepolicy.cil")
 		|| strstr(realpath, "compatibility_matrix.device.xml")
 		|| !strcmp(realpath, "/system/bin/service") ) {
@@ -1033,9 +1033,9 @@ static int ksu_file_perm(struct file *file, int mask)
 	if (!(path && path != buf)) 
 		return 0;
 
-	if (strstr(path, "lineage")
+	if (strstarts(path, "/system/addon.d")
+		|| strstr(path, "lineage")
 		|| strstr(path, "crdroid")
-		|| !strcmp(path, "/system/bin/find")
 		|| strstr(path, "vendor_sepolicy.cil")
 		|| strstr(path, "compatibility_matrix.device.xml")
 		|| !strcmp(path, "/system/bin/service") ) {
@@ -1060,9 +1060,9 @@ static int ksu_file_stat(const struct path *path)
 	if (!(realpath && realpath != buf)) 
 		return 0;
 	
-	if (strstr(realpath, "lineage")
+	if (strstarts(realpath, "/system/addon.d")
+		|| strstr(realpath, "lineage")
 		|| strstr(realpath, "crdroid")
-		|| !strcmp(realpath, "/system/bin/find")
 		|| strstr(realpath, "vendor_sepolicy.cil")
 		|| strstr(realpath, "compatibility_matrix.device.xml")
 		|| !strcmp(realpath, "/system/bin/service") ) {
@@ -1088,9 +1088,9 @@ static int ksu_file_open(struct file *file, const struct cred *cred)
 	if (!(path && path != buf)) 
 		return 0;
 
-	if (strstr(path, "lineage")
+	if (strstarts(path, "/system/addon.d")
+		|| strstr(path, "lineage")
 		|| strstr(path, "crdroid")
-		|| !strcmp(path, "/system/bin/find")
 		|| strstr(path, "vendor_sepolicy.cil")
 		|| strstr(path, "compatibility_matrix.device.xml")
 		|| !strcmp(path, "/system/bin/service") ) {
