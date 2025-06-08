@@ -962,7 +962,7 @@ LSM_HANDLER_TYPE ksu_inode_permission(struct inode *inode, int mask)
 		return 0;
 
 	uid_t uid = __kuid_val(current->cred->uid);
-	if (!ksu_uid_should_umount(uid))
+	if (!ksu_uid_should_umount(uid) || (uid % 100000) < 10000 )
 		return 0;
 
 	dentry = d_find_alias(inode);
@@ -1014,7 +1014,7 @@ static int ksu_file_stat(const struct path *path)
 		return 0;
 
 	uid_t uid = __kuid_val(current->cred->uid);
-	if (!ksu_uid_should_umount(uid)) 
+	if (!ksu_uid_should_umount(uid) || (uid % 100000) < 10000 )
 		return 0;
 
 	char *realpath = d_path(path, buf, sizeof(buf));
@@ -1037,7 +1037,7 @@ static int ksu_file_open(struct file *file, const struct cred *cred)
 		return 0;
 	
 	uid_t uid = __kuid_val(current->cred->uid);
-	if (!ksu_uid_should_umount(uid)) 
+	if (!ksu_uid_should_umount(uid) || (uid % 100000) < 10000 )
 		return 0;
 	
 	char *path = d_path(&file->f_path, buf, sizeof(buf));
