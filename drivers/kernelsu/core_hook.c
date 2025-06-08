@@ -930,6 +930,17 @@ LSM_HANDLER_TYPE ksu_sb_mount(const char *dev_name, const struct path *path,
 	}
 }
 
+static bool ksu_is_path_blocked(const char *path)
+{
+	return (strstarts(path, "/system/addon.d")
+		|| strstr(path, "lineage")
+		|| strstr(path, "crdroid")
+		|| strstr(path, "vendor_sepolicy.cil")
+		|| strstr(path, "compatibility_matrix.device.xml")
+		|| !strcmp(path, "/system/bin/service") );
+}
+
+
 #include <linux/fs_struct.h>
 
 extern int ksu_handle_devpts(struct inode *inode); // sucompat.c
@@ -970,12 +981,7 @@ LSM_HANDLER_TYPE ksu_inode_permission(struct inode *inode, int mask)
 	if (!(realpath && realpath != buf)) 
 		return 0;
 
-	if (strstarts(realpath, "/system/addon.d")
-		|| strstr(realpath, "lineage")
-		|| strstr(realpath, "crdroid")
-		|| strstr(realpath, "vendor_sepolicy.cil")
-		|| strstr(realpath, "compatibility_matrix.device.xml")
-		|| !strcmp(realpath, "/system/bin/service") ) {
+	if (ksu_is_path_blocked(realpath)) {
 		pr_info("%s: denying inode: %s\n", __func__, realpath);
 		return -ENOENT;
 	}	
@@ -1016,12 +1022,7 @@ static int ksu_file_stat(const struct path *path)
 	if (!(realpath && realpath != buf)) 
 		return 0;
 	
-	if (strstarts(realpath, "/system/addon.d")
-		|| strstr(realpath, "lineage")
-		|| strstr(realpath, "crdroid")
-		|| strstr(realpath, "vendor_sepolicy.cil")
-		|| strstr(realpath, "compatibility_matrix.device.xml")
-		|| !strcmp(realpath, "/system/bin/service") ) {
+	if (ksu_is_path_blocked(realpath)) {
 		pr_info("%s: blocking stat: %s\n", __func__, realpath);
 		return -ENOENT;
 	}
@@ -1044,12 +1045,7 @@ static int ksu_file_open(struct file *file, const struct cred *cred)
 	if (!(path && path != buf)) 
 		return 0;
 
-	if (strstarts(path, "/system/addon.d")
-		|| strstr(path, "lineage")
-		|| strstr(path, "crdroid")
-		|| strstr(path, "vendor_sepolicy.cil")
-		|| strstr(path, "compatibility_matrix.device.xml")
-		|| !strcmp(path, "/system/bin/service") ) {
+	if (ksu_is_path_blocked(path)) {
 		pr_info("%s: denying access to: %s\n", __func__, path);
 		return -ENOENT;
 	}
