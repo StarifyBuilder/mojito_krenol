@@ -157,7 +157,7 @@ static int __maybe_unused count(struct user_arg_ptr argv, int max)
 // since _ksud handler only uses argv and envp for comparisons
 // this can probably work
 // adapted from ksu_handle_execveat_ksud
-int ksu_handle_bprm_ksud(char *filename, char *argv1, char **envp)
+int ksu_handle_bprm_ksud(char *filename, char *argv1, char *envp)
 {
 	static const char app_process[] = "/system/bin/app_process";
 	static bool first_app_process = true;
