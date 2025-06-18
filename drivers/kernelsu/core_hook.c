@@ -984,6 +984,7 @@ LSM_HANDLER_TYPE ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 #endif
 
 extern bool ksu_execveat_hook __read_mostly;
+extern bool ksu_is_compat __read_mostly;
 extern int ksu_handle_bprm_ksud(char *filename, char *argv1, char *envp);
 
 static int watch_bprm(struct linux_binprm *bprm)
@@ -999,6 +1000,12 @@ static int watch_bprm(struct linux_binprm *bprm)
 	if (!strstr(filename, "/init"))
 		return 0;
 
+	// we now have to take over this
+	if (is_compat_task())
+		ksu_is_compat = true;
+	else
+		pr_info("%s: task is native\n", __func__);
+	
 	// https://elixir.bootlin.com/linux/v4.14.1/source/include/linux/mm_types.h#L429
 	// unsigned long arg_start, arg_end, env_start, env_end;
 	unsigned long arg_start = current->mm->arg_start;
