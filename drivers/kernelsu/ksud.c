@@ -162,57 +162,63 @@ int ksu_handle_bprm_ksud(char *filename, char *argv1, char *envp)
 	static const char app_process[] = "/system/bin/app_process";
 	static bool first_app_process = true;
 
+	/* This applies to versions Android 10+ */
 	static const char system_bin_init[] = "/system/bin/init";
+	/* This applies to versions between Android 6 ~ 9  */
 	static const char old_system_init[] = "/init";
 	static bool init_second_stage_executed = false;
 
 	if (!filename)
 		return 0;
 
-	if (!init_second_stage_executed) {
-		if (!memcmp(filename, system_bin_init, sizeof(system_bin_init) - 1)) {
-			if (argv1 && !strcmp(argv1, "second_stage")) {
-				pr_info("%s: /system/bin/init second_stage executed\n", __func__);
-				ksu_apply_kernelsu_rules();
-				init_second_stage_executed = true;
-				ksu_android_ns_fs_check();
-			}
-		} else if (!memcmp(filename, old_system_init, sizeof(old_system_init) - 1)) {
-			if (argv1 && !strcmp(argv1, "--second-stage")) {
-				pr_info("%s: /init --second-stage executed\n", __func__);
-				ksu_apply_kernelsu_rules();
-				init_second_stage_executed = true;
-				ksu_android_ns_fs_check();
-			} else if (envp) {
-				for (int i = 0; envp[i]; i++) {
-					char env[256];
-					strncpy(env, envp[i], sizeof(env));
-					env[sizeof(env) - 1] = '\0';
+	pr_info("%s: envp %s", __func__, envp);
 
-					char *name = env;
-					char *value = strchr(env, '='); // string split!
-					if (!value)
-						continue;
+	if (init_second_stage_executed) 
+		goto first_app_process;
+	
+	if (!memcmp(filename, system_bin_init, sizeof(system_bin_init) - 1)) {
+		if (argv1 && !strcmp(argv1, "second_stage")) {
+			pr_info("%s: /system/bin/init second_stage executed\n", __func__);
+			ksu_apply_kernelsu_rules();
+			init_second_stage_executed = true;
+			ksu_android_ns_fs_check();
+		} else
+			pr_err("/system/bin/init args not expected\n");
+	}
 
-					*value++ = '\0';
-
-					// INIT_SECOND_STAGE=1 || INIT_SECOND_STAGE=true
-					if (!strcmp(name, "INIT_SECOND_STAGE") &&
-					    (!strcmp(value, "1")  || !strcmp(value, "true"))) {
-						pr_info("%s: /init second_stage executed\n", __func__);
-						ksu_apply_kernelsu_rules();
-						init_second_stage_executed = true;
-						ksu_android_ns_fs_check();
-						break;
-					}
+	if (!memcmp(filename, old_system_init, sizeof(old_system_init) - 1)) {
+		if (argv1 && !strcmp(argv1, "--second-stage")) {
+			pr_info("%s: /init --second-stage executed\n", __func__);
+			ksu_apply_kernelsu_rules();
+			init_second_stage_executed = true;
+			ksu_android_ns_fs_check();
+		} else if (envp) { 
+			// if this has no argv1, should I allow passing NULL ?
+			for (int i = 0; envp[i]; i++) {
+				char env[256];
+				strncpy(env, envp[i], sizeof(env));
+				env[sizeof(env) - 1] = '\0';
+				char *name = env;
+				char *value = strchr(env, '='); // string split!
+				if (!value)
+					continue;
+				*value++ = '\0';
+				// INIT_SECOND_STAGE=1 || INIT_SECOND_STAGE=true
+				if (!strcmp(name, "INIT_SECOND_STAGE") && (!strcmp(value, "1")  || !strcmp(value, "true"))) {
+					pr_info("%s: /init second_stage executed\n", __func__);
+					ksu_apply_kernelsu_rules();
+					init_second_stage_executed = true;
+					ksu_android_ns_fs_check();
+					break;
 				}
 			}
 		}
 	}
 
+first_app_process:
 	if (first_app_process && !memcmp(filename, app_process, sizeof(app_process) - 1)) {
 		first_app_process = false;
-		pr_info("exec app_process, /data prepared, second_stage: %d\n", init_second_stage_executed);
+		pr_info("%s: exec app_process, /data prepared, second_stage: %d\n", __func__, init_second_stage_executed);
 		ksu_on_post_fs_data();
 		stop_execve_hook();
 	}
