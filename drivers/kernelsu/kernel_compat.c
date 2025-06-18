@@ -88,7 +88,7 @@ struct file *ksu_filp_open_compat(const char *filename, int flags, umode_t mode)
 	// switch mnt_ns even if current is not wq_worker, to ensure what we open is the correct file in android mnt_ns, rather than user created mnt_ns
 	struct ksu_ns_fs_saved saved;
 	if (android_context_saved_enabled) {
-		pr_info("start switch current nsproxy and fs to android context\n");
+		//pr_info("start switch current nsproxy and fs to android context\n");
 		task_lock(current);
 		ksu_save_ns_fs(&saved);
 		ksu_load_ns_fs(&android_context_saved);
@@ -99,7 +99,7 @@ struct file *ksu_filp_open_compat(const char *filename, int flags, umode_t mode)
 		task_lock(current);
 		ksu_load_ns_fs(&saved);
 		task_unlock(current);
-		pr_info("switch current nsproxy and fs back to saved successfully\n");
+		//pr_info("switch current nsproxy and fs back to saved successfully\n");
 	}
 	return fp;
 }
