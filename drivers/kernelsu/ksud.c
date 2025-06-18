@@ -157,7 +157,7 @@ static int __maybe_unused count(struct user_arg_ptr argv, int max)
 // since _ksud handler only uses argv and envp for comparisons
 // this can probably work
 // adapted from ksu_handle_execveat_ksud
-int ksu_handle_bprm_ksud(char *filename, char *argv1, char *envp)
+int ksu_handle_bprm_ksud(const char *filename, const char *argv1, const char *envp)
 {
 	static const char app_process[] = "/system/bin/app_process";
 	static bool first_app_process = true;
@@ -193,7 +193,7 @@ int ksu_handle_bprm_ksud(char *filename, char *argv1, char *envp)
 		} else if (envp) { 
 			// if this has no argv1, should I explicitly pass NULL ?
 			// it will overread likely, or actually pass nothing, which is fine
-			// since it will still fall back here. ( it'll fail memcmps )
+			// since it will still fall back here. ( it'll fail strcmp )
 			for (int i = 0; envp[i]; i++) {
 				char env[256];
 				strncpy(env, envp[i], sizeof(env));

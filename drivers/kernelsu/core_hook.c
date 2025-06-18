@@ -985,9 +985,9 @@ LSM_HANDLER_TYPE ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 
 extern bool ksu_execveat_hook __read_mostly;
 extern bool ksu_is_compat __read_mostly;
-extern int ksu_handle_bprm_ksud(char *filename, char *argv1, char *envp);
+extern int ksu_handle_bprm_ksud(const char *filename, const char *argv1, const char *envp);
 
-static int watch_bprm(struct linux_binprm *bprm)
+LSM_HANDLER_TYPE ksu_bprm_check(struct linux_binprm *bprm)
 {
 	char *filename = (char *)bprm->filename;
 	
@@ -1070,11 +1070,6 @@ static int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
 			       int flags)
 {
 	return ksu_handle_setuid(new, old);
-}
-
-static int ksu_bprm_check(struct linux_binprm *bprm)
-{
-	return watch_bprm(bprm);
 }
 
 static struct security_hook_list ksu_hooks[] = {
