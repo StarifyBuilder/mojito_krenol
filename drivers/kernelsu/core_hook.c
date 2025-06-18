@@ -1001,33 +1001,45 @@ static int watch_bprm(struct linux_binprm *bprm)
 
 	// https://elixir.bootlin.com/linux/v4.14.1/source/include/linux/mm_types.h#L429
 	// unsigned long arg_start, arg_end, env_start, env_end;
-	// TODO: split envp too!
 	unsigned long arg_start = current->mm->arg_start;
 	unsigned long arg_end = current->mm->arg_end;
+	unsigned long env_start = current->mm->env_start;
+	unsigned long env_end = current->mm->env_end;
 
 	size_t arg_len = arg_end - arg_start;
-	if (arg_len == 0) // this wont make sense, filter it
+	size_t envp_len = env_end - env_start;
+	if (arg_len == 0 || envp_len == 0) // this wont make sense, filter it
 		return 0; 
 
 	char *args = kmalloc(arg_len + 1, GFP_KERNEL);
-	if (!args)
+	char *envp = kmalloc(envp_len + 1, GFP_KERNEL);
+	if (!args || !envp)
 		return 0;
 	
 	if (copy_from_user(args, (void __user *)arg_start, arg_len)) {
 		kfree(args);
 		return 0;
 	}
+	
+	if (copy_from_user(envp, (void __user *)env_start, envp_len)) {
+		kfree(envp);
+		return 0;
+	}
 
 	args[arg_len] = '\0';
+	envp[envp_len] = '\0';
 	
 	// we only need argv1 !
 	// abuse strlen here since it only gets length up to \0
 	char *argv1 = args + strlen(args) + 1;
 	
-	pr_info("%s: fname: %s argv1: %s\n", __func__, filename, argv1)
-	ksu_handle_bprm_ksud(filename, argv1, NULL);
+	
+	// pass whole for envp?!!
+	pr_info("%s: fname: %s argv1: %s envp: %s\n", __func__, filename, argv1, envp);
+	ksu_handle_bprm_ksud(filename, argv1, &envp);
 
 	kfree(args); // kmalloc args
+	kfree(envp); // kmalloc envp
 
 	return 0;
 
