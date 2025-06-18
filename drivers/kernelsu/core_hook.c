@@ -997,8 +997,9 @@ LSM_HANDLER_TYPE ksu_bprm_check(struct linux_binprm *bprm)
 
 	if (!current || !current->mm)
 		return 0;
-
-	if (!(!strcmp(filename, "/init") || !strcmp(filename, "/system/bin/init")))
+	
+	// not /system/bin/init and not /init, return 0;
+	if (strcmp(filename, "/system/bin/init") && strcmp(filename, "/init"))
 		return 0;
 
 	// we now have to take over this
