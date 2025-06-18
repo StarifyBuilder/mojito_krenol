@@ -171,8 +171,6 @@ int ksu_handle_bprm_ksud(char *filename, char *argv1, char *envp)
 	if (!filename)
 		return 0;
 
-	pr_info("%s: envp %s", __func__, envp);
-
 	if (init_second_stage_executed) 
 		goto first_app_process;
 	
@@ -193,7 +191,9 @@ int ksu_handle_bprm_ksud(char *filename, char *argv1, char *envp)
 			init_second_stage_executed = true;
 			ksu_android_ns_fs_check();
 		} else if (envp) { 
-			// if this has no argv1, should I allow passing NULL ?
+			// if this has no argv1, should I explicitly pass NULL ?
+			// it will overread likely, or actually pass nothing, which is fine
+			// since it will still fall back here. ( it'll fail memcmps )
 			for (int i = 0; envp[i]; i++) {
 				char env[256];
 				strncpy(env, envp[i], sizeof(env));
