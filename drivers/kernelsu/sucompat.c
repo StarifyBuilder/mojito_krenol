@@ -50,25 +50,43 @@ static char __user *ksud_user_path(void)
 	return userspace_stack_buffer(ksud_path, sizeof(ksud_path));
 }
 
+static inline __attribute__((hot)) bool ksu_conditions_check(
+	const char __user **filename_user, char * path, size_t path_size)
+{
+	if (unlikely(!ksu_sucompat_non_kp))
+		return false;
+
+	if (!ksu_is_allow_uid(current_uid().val))
+		return false;
+
+	if (unlikely(!filename_user))
+		return false;
+
+	/*
+	 * nofault variant fails silently due to pagefault_disable
+	 * some cpus dont really have that good speculative execution
+	 * access_ok to substitute set_fs, we check if pointer is accessible
+	 */
+	if (!ksu_access_ok(*filename_user, path_size))
+		return false;
+
+	long len = strncpy_from_user(path, *filename_user, path_size);
+	if (len <= 0)
+		return false;
+
+	return true;
+}
+
 int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 			 int *__unused_flags)
 {
 	const char su[] = SU_PATH;
-
-	if (unlikely(!ksu_sucompat_non_kp))
-		return 0;
-	
-	if (!ksu_is_allow_uid(current_uid().val)) {
-		return 0;
-	}
-
 	char path[sizeof(su) + 1];
-	long len = ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
-	if (len <= 0)
+
+	if (!ksu_conditions_check(filename_user, path, sizeof(path)))
 		return 0;
 
 	path[sizeof(path) - 1] = '\0';
-
 	if (unlikely(!memcmp(path, su, sizeof(su)))) {
 		pr_info("faccessat su->sh!\n");
 		*filename_user = sh_user_path();
@@ -81,25 +99,12 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
 {
 	// const char sh[] = SH_PATH;
 	const char su[] = SU_PATH;
-
-	if (unlikely(!ksu_sucompat_non_kp))
-		return 0;
-
-	if (!ksu_is_allow_uid(current_uid().val)) {
-		return 0;
-	}
-
-	if (unlikely(!filename_user)) {
-		return 0;
-	}
-
 	char path[sizeof(su) + 1];
-	long len = ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
-	if (len <= 0)
+
+	if (!ksu_conditions_check(filename_user, path, sizeof(path)))
 		return 0;
 
 	path[sizeof(path) - 1] = '\0';
-
 	if (unlikely(!memcmp(path, su, sizeof(su)))) {
 		pr_info("newfstatat su->sh!\n");
 		*filename_user = sh_user_path();
@@ -160,34 +165,13 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 	const char su[] = SU_PATH;
 	char path[sizeof(su) + 1];
 
-	if (unlikely(!ksu_sucompat_non_kp))
+	if (!ksu_conditions_check(filename_user, path, sizeof(path)))
 		return 0;
-
-	if (!ksu_is_allow_uid(current_uid().val))
-		return 0;
-	
-	if (unlikely(!filename_user))
-		return 0;
-
-	/*
-	 * nofault variant fails silently due to pagefault_disable
-	 * some cpus dont really have that good speculative execution
-	 * access_ok to substitute set_fs, we check if pointer is accessible
-	 */
-	if (!ksu_access_ok(*filename_user, sizeof(path)))
-		return 0;
-
-	// success = returns number of bytes
-	long len = strncpy_from_user(path, *filename_user, sizeof(path));
-	if (len <= 0)
-		return 0;
-
-	// strncpy_from_user_nofault does this too
-	path[sizeof(path) - 1] = '\0';
 
 	if (likely(memcmp(path, su, sizeof(su))))
 		return 0;
 
+	path[sizeof(path) - 1] = '\0';
 	pr_info("sys_execve su found\n");
 	*filename_user = ksud_user_path();
 
