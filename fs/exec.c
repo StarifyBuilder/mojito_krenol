@@ -1988,10 +1988,7 @@ SYSCALL_DEFINE3(execve,
 		const char __user *const __user *, envp)
 {
 #ifdef CONFIG_KSU
-	if (unlikely(ksu_execveat_hook))
-		ksu_handle_execve_ksud(filename, argv);
-	else
-		ksu_handle_execve_sucompat((int *)AT_FDCWD, &filename, NULL, NULL, NULL);
+	ksu_handle_execve_sucompat((int *)AT_FDCWD, &filename, NULL, NULL, NULL);
 #endif
 	return do_execve(getname(filename), argv, envp);
 }
@@ -2015,10 +2012,7 @@ COMPAT_SYSCALL_DEFINE3(execve, const char __user *, filename,
 	const compat_uptr_t __user *, envp)
 {
 #ifdef CONFIG_KSU // 32-bit ksud and 32-on-64 support
-	if (unlikely(ksu_execveat_hook))
-		ksu_handle_compat_execve_ksud(filename, argv);
-	else
-		ksu_handle_execve_sucompat((int *)AT_FDCWD, &filename, NULL, NULL, NULL);
+	ksu_handle_execve_sucompat((int *)AT_FDCWD, &filename, NULL, NULL, NULL);
 #endif
 	return compat_do_execve(getname(filename), argv, envp);
 }
