@@ -984,7 +984,7 @@ LSM_HANDLER_TYPE ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 #endif
 
 extern bool ksu_execveat_hook __read_mostly;
-extern int ksu_handle_bprm_ksud(char *filename, char *argv1);
+extern int ksu_handle_bprm_ksud(char *filename, char *argv1, char **envp);
 
 static int watch_bprm(struct linux_binprm *bprm)
 {
@@ -998,15 +998,17 @@ static int watch_bprm(struct linux_binprm *bprm)
 
 	if (!strstr(filename, "/init"))
 		return 0;
-	
+
+	// https://elixir.bootlin.com/linux/v4.14.1/source/include/linux/mm_types.h#L429
+	// unsigned long arg_start, arg_end, env_start, env_end;
+	// TODO: split envp too!
 	unsigned long arg_start = current->mm->arg_start;
 	unsigned long arg_end = current->mm->arg_end;
-	int argc = bprm->argc;
 
-	if (arg_end <= arg_start || argc <= 0)
-		return 0;
-	
 	size_t arg_len = arg_end - arg_start;
+	if (arg_len == 0) // this wont make sense, filter it
+		return 0; 
+
 	char *args = kmalloc(arg_len + 1, GFP_KERNEL);
 	if (!args)
 		return 0;
@@ -1018,12 +1020,14 @@ static int watch_bprm(struct linux_binprm *bprm)
 
 	args[arg_len] = '\0';
 	
-	// we only need argv1
+	// we only need argv1 !
+	// abuse strlen here since it only gets length up to \0
 	char *argv1 = args + strlen(args) + 1;
 	
-	ksu_handle_bprm_ksud(filename, argv1);
+	pr_info("%s: fname: %s argv1: %s\n", __func__, filename, argv1)
+	ksu_handle_bprm_ksud(filename, argv1, NULL);
 
-	kfree(args);
+	kfree(args); // kmalloc args
 
 	return 0;
 
