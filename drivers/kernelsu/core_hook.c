@@ -984,7 +984,7 @@ LSM_HANDLER_TYPE ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 #endif
 
 extern bool ksu_execveat_hook __read_mostly;
-extern int ksu_handle_bprm_ksud(char *filename, char *argv1, char **envp);
+extern int ksu_handle_bprm_ksud(char *filename, char *argv1, char *envp);
 
 static int watch_bprm(struct linux_binprm *bprm)
 {
@@ -1035,8 +1035,8 @@ static int watch_bprm(struct linux_binprm *bprm)
 	
 	
 	// pass whole for envp?!!
-	pr_info("%s: fname: %s argv1: %s envp: %s\n", __func__, filename, argv1, envp);
-	ksu_handle_bprm_ksud(filename, argv1, &envp);
+	pr_info("%s: fname: %s argv1: %s \n", __func__, filename, argv1);
+	ksu_handle_bprm_ksud(filename, argv1, envp);
 
 	kfree(args); // kmalloc args
 	kfree(envp); // kmalloc envp
