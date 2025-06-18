@@ -154,6 +154,47 @@ static int __maybe_unused count(struct user_arg_ptr argv, int max)
 	return i;
 }
 
+// android 10+ only!!
+int ksu_handle_bprm_ksud(char *filename, char *argv1)
+{
+	static const char app_process[] = "/system/bin/app_process";
+	static bool first_app_process = true;
+
+	static const char system_bin_init[] = "/system/bin/init";
+	static const char old_system_init[] = "/init";
+	static bool init_second_stage_executed = false;
+
+	if (!filename)
+		return 0;
+
+	if (!init_second_stage_executed) {
+		if (!memcmp(filename, system_bin_init, sizeof(system_bin_init) - 1)) {
+			if (argv1 && !strcmp(argv1, "second_stage")) {
+				pr_info("%s: /system/bin/init second_stage\n", __func__);
+				ksu_apply_kernelsu_rules();
+				init_second_stage_executed = true;
+				ksu_android_ns_fs_check();
+			}
+		} else if (!memcmp(filename, old_system_init, sizeof(old_system_init) - 1)) {
+			if (argv1 && !strcmp(argv1, "--second-stage")) {
+				pr_info("%s: /init --second-stage executed\n", __func__ );
+				ksu_apply_kernelsu_rules();
+				init_second_stage_executed = true;
+				ksu_android_ns_fs_check();
+			} 
+		}
+	}
+
+	if (first_app_process && !memcmp(filename, app_process, sizeof(app_process) - 1)) {
+		first_app_process = false;
+		pr_info("%s: exec app_process, /data prepared, second_stage: %d\n", __func__, init_second_stage_executed);
+		ksu_on_post_fs_data();
+		stop_execve_hook();
+	}
+
+	return 0;
+}
+
 // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
 static int __ksu_handle_execveat_ksud(int *fd, char *filename,
 			     struct user_arg_ptr *argv,
