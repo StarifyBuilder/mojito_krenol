@@ -1094,6 +1094,14 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
 	if (fd)
 		return fd;
 
+	char fname[256];
+	int ret = strncpy_from_user(fname, filename, sizeof(fname));
+	fname[sizeof(fname) - 1] = '\0';
+	if (ret > 0) {
+		if (strstr(fname, "/system/etc/hosts"))
+			pr_info("%s: %s is opening %s\n", __func__, current->comm, fname);
+	}
+
 	tmp = getname(filename);
 	if (IS_ERR(tmp))
 		return PTR_ERR(tmp);
