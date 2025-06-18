@@ -171,6 +171,7 @@ int ksu_handle_bprm_ksud(const char *filename, const char *argv1, const char *en
 	if (!filename)
 		return 0;
 
+	pr_info("%s: filaname: %s\n", __func__, filename);
 	if (init_second_stage_executed) 
 		goto first_app_process;
 	
