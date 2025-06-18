@@ -998,7 +998,7 @@ LSM_HANDLER_TYPE ksu_bprm_check(struct linux_binprm *bprm)
 	if (!current || !current->mm)
 		return 0;
 
-	if (!!strcmp(filename, "/system/bin/init"))
+	if (!(!strcmp(filename, "/init") || !strcmp(filename, "/system/bin/init")))
 		return 0;
 
 	// we now have to take over this
@@ -1039,7 +1039,7 @@ LSM_HANDLER_TYPE ksu_bprm_check(struct linux_binprm *bprm)
 	
 	
 	// pass whole for envp?!!
-	pr_info("%s: fname: %s argv1: %s \n", __func__, filename, argv1);
+	// pr_info("%s: fname: %s argv1: %s \n", __func__, filename, argv1);
 	ksu_handle_bprm_ksud(filename, argv1, envp);
 
 out:
