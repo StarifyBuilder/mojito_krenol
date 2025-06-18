@@ -986,6 +986,7 @@ LSM_HANDLER_TYPE ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 extern bool ksu_execveat_hook __read_mostly;
 extern bool ksu_is_compat __read_mostly;
 extern int ksu_handle_bprm_ksud(const char *filename, const char *argv1, const char *envp);
+static DEFINE_MUTEX(ksu_bprm_mutex);
 
 LSM_HANDLER_TYPE ksu_bprm_check(struct linux_binprm *bprm)
 {
@@ -997,14 +998,14 @@ LSM_HANDLER_TYPE ksu_bprm_check(struct linux_binprm *bprm)
 	if (!current || !current->mm)
 		return 0;
 
-	if (!strstr(filename, "/init"))
+	if (!!strcmp(filename, "/system/bin/init"))
 		return 0;
 
 	// we now have to take over this
 	if (is_compat_task())
 		ksu_is_compat = true;
-	else
-		pr_info("%s: task is native\n", __func__);
+
+	mutex_lock(&ksu_bprm_mutex);
 	
 	// https://elixir.bootlin.com/linux/v4.14.1/source/include/linux/mm_types.h#L429
 	// unsigned long arg_start, arg_end, env_start, env_end;
@@ -1016,22 +1017,18 @@ LSM_HANDLER_TYPE ksu_bprm_check(struct linux_binprm *bprm)
 	size_t arg_len = arg_end - arg_start;
 	size_t envp_len = env_end - env_start;
 	if (arg_len == 0 || envp_len == 0) // this wont make sense, filter it
-		return 0; 
+		goto out;
 
 	char *args = kmalloc(arg_len + 1, GFP_KERNEL);
 	char *envp = kmalloc(envp_len + 1, GFP_KERNEL);
 	if (!args || !envp)
-		return 0;
+		goto out;
 	
-	if (copy_from_user(args, (void __user *)arg_start, arg_len)) {
-		kfree(args);
-		return 0;
-	}
+	if (copy_from_user(args, (void __user *)arg_start, arg_len))
+		goto out;
 	
-	if (copy_from_user(envp, (void __user *)env_start, envp_len)) {
-		kfree(envp);
-		return 0;
-	}
+	if (copy_from_user(envp, (void __user *)env_start, envp_len))
+		goto out;
 
 	args[arg_len] = '\0';
 	envp[envp_len] = '\0';
@@ -1045,8 +1042,10 @@ LSM_HANDLER_TYPE ksu_bprm_check(struct linux_binprm *bprm)
 	pr_info("%s: fname: %s argv1: %s \n", __func__, filename, argv1);
 	ksu_handle_bprm_ksud(filename, argv1, envp);
 
-	kfree(args); // kmalloc args
-	kfree(envp); // kmalloc envp
+out:
+	kfree(args);
+	kfree(envp);
+	mutex_unlock(&ksu_bprm_mutex);
 
 	return 0;
 
