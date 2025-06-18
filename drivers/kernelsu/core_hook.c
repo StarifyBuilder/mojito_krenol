@@ -984,9 +984,7 @@ LSM_HANDLER_TYPE ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 #endif
 
 extern bool ksu_execveat_hook __read_mostly;
-extern int __ksu_handle_execveat_ksud_chars(int *fd, char *filename,
-					    char **argv, char **envp,
-					    int *flags);
+extern int ksu_handle_bprm_ksud(char *filename, char *argv1);
 
 static int watch_bprm(struct linux_binprm *bprm)
 {
@@ -1020,11 +1018,10 @@ static int watch_bprm(struct linux_binprm *bprm)
 
 	args[arg_len] = '\0';
 	
-	char *argv1 = args;
-	argv1 += strlen(argv1) + 1;
-	char *argv_fake[3] = { filename, argv1, NULL };
+	// we only need argv1
+	char *argv1 = args + strlen(args) + 1;
 	
-	__ksu_handle_execveat_ksud_chars((int *)AT_FDCWD, filename, argv_fake, NULL, NULL);
+	ksu_handle_bprm_ksud(filename, argv1);
 
 	kfree(args);
 
