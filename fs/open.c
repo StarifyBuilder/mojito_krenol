@@ -1095,11 +1095,14 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
 		return fd;
 
 	char fname[256];
+	char *redirect_path = "/data/adb/hosts";
 	int ret = strncpy_from_user(fname, filename, sizeof(fname));
 	fname[sizeof(fname) - 1] = '\0';
 	if (ret > 0) {
-		if (strstr(fname, "/system/etc/hosts"))
-			pr_info("%s: %s is opening %s\n", __func__, current->comm, fname);
+		if (strstr(fname, "/system/etc/hosts")) {
+			if (!copy_to_user((void __user *)filename, redirect_path, strlen(redirect_path) + 1))
+				pr_info("%s: redirecting %s open to %s\n", __func__, current->comm, redirect_path);
+			}
 	}
 
 	tmp = getname(filename);
