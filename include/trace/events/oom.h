@@ -98,7 +98,11 @@ TRACE_EVENT(mark_victim,
 		__entry->file_rss = PG_COUNT_TO_KB(get_mm_counter(task->mm, MM_FILEPAGES));
 		__entry->shmem_rss = PG_COUNT_TO_KB(get_mm_counter(task->mm, MM_SHMEMPAGES));
 		__entry->uid = uid;
-		__entry->pgtables = mm_pgtables_bytes(task->mm) >> 10;
+#ifdef HAVE_MM_PGTABLES_BYTES
+    		__entry->pgtables = mm_pgtables_bytes(task->mm) >> 10;
+#else
+    		__entry->pgtables = 0;
+#endif
 		__entry->oom_score_adj = task->signal->oom_score_adj;
 	),
 
