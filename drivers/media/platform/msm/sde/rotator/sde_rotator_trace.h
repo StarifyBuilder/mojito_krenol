@@ -10,9 +10,6 @@
  * GNU General Public License for more details.
  *
  */
-#ifdef CONFIG_BPF
-#error "BPF tracing not supported for sde_rotator in this kernel. Please disable CONFIG_BPF"
-#endif
 #if !defined(TRACE_SDE_ROTATOR_H) || defined(TRACE_HEADER_MULTI_READ)
 #define TRACE_SDE_ROTATOR_H
 
