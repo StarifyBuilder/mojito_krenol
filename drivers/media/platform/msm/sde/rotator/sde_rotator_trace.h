@@ -10,6 +10,9 @@
  * GNU General Public License for more details.
  *
  */
+#ifdef CONFIG_BPF
+#error "BPF tracing not supported for sde_rotator in this kernel. Please disable CONFIG_BPF"
+#endif
 #if !defined(TRACE_SDE_ROTATOR_H) || defined(TRACE_HEADER_MULTI_READ)
 #define TRACE_SDE_ROTATOR_H
 
@@ -22,6 +25,7 @@
 
 #include <linux/tracepoint.h>
 
+#ifndef CONFIG_BPF  // Add this line to disable BPF expansion in old kernel
 DECLARE_EVENT_CLASS(rot_entry_template,
 	TP_PROTO(u32 ss_id, u32 sq_id, u32 pr_id, u32 flags,
 			u32 src_fmt, u32 src_bw, u32 src_bh,
@@ -328,6 +332,7 @@ TRACE_EVENT(sde_rot_evtlog,
 			__entry->data[12], __entry->data[13],
 			__entry->data[14])
 )
+#endif // CONFIG_BPF
 
 #endif /* if !defined(TRACE_SDE_ROTATOR_H) ||
 	*		defined(TRACE_HEADER_MULTI_READ)
